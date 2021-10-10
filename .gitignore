@@ -130,3 +130,6 @@ dmypy.json
 
 # Ignore data folder #
 /data/*
+
+# Ignore dsstore file that is a mac specific file #
+.DS_Store
