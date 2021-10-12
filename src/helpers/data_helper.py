@@ -159,7 +159,6 @@ def prepare_mask_data(meta_data: dict, target_size: Tuple[int, int], config: dic
 
     return id_array, mask_array
 
-
 if __name__ == '__main__':
     example_file = './data/example.json'
     config_file = './data/code_config.json'
@@ -177,5 +176,3 @@ if __name__ == '__main__':
 
     print('First five ids: {}'.format(id_array[0:5]))
     print('Size of mask array: {}'.format(mask_array.shape))
-
-
