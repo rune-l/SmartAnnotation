@@ -133,3 +133,7 @@ dmypy.json
 
 # Ignore dsstore file that is a mac specific file #
 .DS_Store
+
+# Ignore model and log folders #
+/logs/*
+/models/*

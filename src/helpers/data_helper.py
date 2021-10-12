@@ -9,11 +9,12 @@ import cv2
 import os
 import numpy as np
 import pandas as pd
-from gluoncv.data import ADE20KSegmentation
-from gluoncv.utils.viz import get_color_pallete
 from PIL import Image, ImageDraw
+from tensorflow.keras.preprocessing.image import load_img, img_to_array
 from typing import List, Tuple
 
+# Constant #
+ENCODING = 'iso-8859-1'
 
 # Write helper functions #
 def find_metadata_files(directory: str, extension: str) -> List[str]:
@@ -32,6 +33,7 @@ def get_metadata(meta_filename: str) -> dict:
     Input:Takes the metadata file as input
     Output: Returns a dict with the following information.
     - img_file: str = Image file name.
+    - full_path: str = Full image path.
     - img_size: list = List of image size.
     - objects: The objects in the in the image, contains both the class and the polygon coordinates.
     - parts: The same as ojects but for the parts (smaller objects, such as a building window).
@@ -40,7 +42,7 @@ def get_metadata(meta_filename: str) -> dict:
     objects = {}
     parts = {}
 
-    with open(meta_filename, 'r') as f:
+    with open(meta_filename, 'r', encoding=ENCODING) as f:
         input_info = json.load(f)
 
     contents = input_info['annotation']['object']
@@ -52,6 +54,7 @@ def get_metadata(meta_filename: str) -> dict:
     iscrop = np.array([int(x['crop']) for x in contents])
     listattributes = [x['attributes'] for x in contents]
     polygon = [x['polygon'] for x in contents]
+    mask_path = [x['instance_mask'] for x in contents]
     for p in polygon:
         p['x'] = np.array(p['x'])
         p['y'] = np.array(p['y'])
@@ -68,6 +71,9 @@ def get_metadata(meta_filename: str) -> dict:
     objects['polygon'] = [
         polygon[x] for x in list(np.where(ispart == 0)[0])
     ]
+    objects['mask_path'] = [
+        mask_path[x] for x in list(np.where(ispart == 0)[0])
+    ]
 
     parts['instancendx'] = instance[ispart == 1]
     parts['class'] = [names[x] for x in list(np.where(ispart == 1)[0])]
@@ -79,10 +85,12 @@ def get_metadata(meta_filename: str) -> dict:
         listattributes[x] for x in list(np.where(ispart == 1)[0])
     ]
     parts['polygon'] = [polygon[x] for x in list(np.where(ispart == 1)[0])]
+    parts['mask_path'] = [mask_path[x] for x in list(np.where(ispart == 1)[0])]
 
     # Define the output dict #
     meta_dict = {
         'img_file': input_info['annotation']['filename'],
+        'full_path': meta_filename.replace('.json', '.jpg'),
         'img_size': input_info['annotation']['imsize'],
         'objects': objects,
         'parts': parts
@@ -90,28 +98,35 @@ def get_metadata(meta_filename: str) -> dict:
 
     return meta_dict
 
-def create_mask_array(x_arr: np.ndarray, y_arr: np.ndarray, img_width: int, img_height: int) -> np.ndarray:
+def create_mask_array(mask_path: str, target_size: Tuple[int, int]) -> np.ndarray:
     """Create the image mask for the polygon. Here the image mask is an array of zeros and ones"""
     
-    # Create list of coordinates for the polygon edges #
-    poly_verts = [(xc, yc) for xc, yc in zip(x_arr, y_arr)]
-
-    # Create new image of zeros #
-    img = Image.new('L', (img_width, img_height), 0)
-
-    # Draw the polygon with ones #
-    ImageDraw.Draw(img).polygon(poly_verts, outline=1, fill=1)
-    mask = np.array(img)
+    # Load image #
+    img = load_img(path=mask_path, target_size=target_size)
     
-    return mask
+    # Convert to a numpy array #
+    arr = img_to_array(img)
 
+    # Sum over the RGB axis #
+    arr = arr.sum(axis=-1)
+
+    # Initiate the mask array #
+    mask_arr = np.zeros(arr.shape)
+
+    # Set all the white pixels to 1 #
+    mask_arr[arr >= (255*3)] = 1
+
+    # Convert mask to boolean array #
+    mask_arr = mask_arr.astype(bool)
+    
+    return mask_arr
 
 def resize_mask_array(mask_array: np.ndarray, target_size: Tuple[int, int]) -> np.ndarray:
     """Resize img to conform to standard image size"""
-    resized_img = cv2.resize(mask_array, dsize=target_size, interpolation=cv2.INTER_CUBIC)
+    resized_img = cv2.resize(mask_array, dsize=target_size, interpolation=cv2.INTER_NEAREST)
     return resized_img
 
-def prepare_mask_data(meta_data: dict, target_size: Tuple[int, int], config: dict) -> Tuple[np.ndarray, np.ndarray]:
+def prepare_mask_data(meta_data: dict, target_size: Tuple[int, int], config: dict, img_folder: str) -> Tuple[np.ndarray, np.ndarray]:
     """
     Prepare the labels and their placements for the image.
     Consists of an array of class_ids and the array of masks.
@@ -122,25 +137,21 @@ def prepare_mask_data(meta_data: dict, target_size: Tuple[int, int], config: dic
     id_list = []
     mask_list = []
 
-    img_size = meta_data['img_size']
-
-    for name, polygon in zip(meta_data['objects']['corrected_raw_name'], meta_data['objects']['polygon']):
+    for name, mask_path in zip(meta_data['objects']['corrected_raw_name'], meta_data['objects']['mask_path']):
         
         # Extract object name and id #
         obj_class = name
         obj_id = config[obj_class]['idx']
         
-        # Extract polygon coordinates #
-        poly_x = polygon['x']
-        poly_y = polygon['y']
+        # Define full mask path #
+        mask_full_path = os.path.join(img_folder, mask_path)
 
         # Create and resize layer mask #
-        poly_mask = create_mask_array(x_arr=poly_x, y_arr=poly_y, img_width=img_size[0], img_height=img_size[1])
-        resized_mask = resize_mask_array(mask_array=poly_mask, target_size=target_size)
+        poly_mask = create_mask_array(mask_path=mask_full_path, target_size=target_size)
 
         # Append results #
         id_list.append(obj_id)
-        mask_list.append(resized_mask.astype(bool))
+        mask_list.append(poly_mask)
 
     # Create output #
     id_array = np.array(id_list)
@@ -165,4 +176,3 @@ if __name__ == '__main__':
 
     print('First five ids: {}'.format(id_array[0:5]))
     print('Size of mask array: {}'.format(mask_array.shape))
-
