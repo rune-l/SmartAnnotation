@@ -137,11 +137,10 @@ def prepare_mask_data(meta_data: dict, target_size: Tuple[int, int], config: dic
     id_list = []
     mask_list = []
 
-    for name, mask_path in zip(meta_data['objects']['corrected_raw_name'], meta_data['objects']['mask_path']):
+    for obj_class, mask_path in zip(meta_data['objects']['class'], meta_data['objects']['mask_path']):
         
         # Extract object name and id #
-        obj_class = name
-        obj_id = config[obj_class]['idx']
+        obj_id = config[obj_class]
         
         # Define full mask path #
         mask_full_path = os.path.join(img_folder, mask_path)

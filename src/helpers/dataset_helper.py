@@ -39,7 +39,7 @@ class ADE20K(utils.Dataset):
             i for i in range(0, len(self.index_ade20k['filename'])) if 
             check_str in self.index_ade20k['folder'][i]
         ]
-        
+
     
     def load_image(self, image_id: int) -> np.ndarray:
         """Load the image with the given target size."""
@@ -78,8 +78,8 @@ class ADE20K(utils.Dataset):
         for key in self.config.keys():
             self.add_class(
                 source=self.source,
-                class_id=self.config[key]['idx'],
-                class_name=self.config[key]['short_name']
+                class_id=self.config[key],
+                class_name=key
             )
 
         # Add images by their image id (place in file list) #

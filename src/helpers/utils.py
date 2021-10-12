@@ -254,7 +254,7 @@ class Dataset(object):
 
     def __init__(self, class_map=None):
         self._image_ids = []
-        self.image_info = []
+        self.image_info = {}
         # Background is always the first class
         self.class_info = [{"source": "", "id": 0, "name": "BG"}]
         self.source_class_ids = {}
@@ -280,7 +280,7 @@ class Dataset(object):
             "path": path,
         }
         image_info.update(kwargs)
-        self.image_info.append(image_info)
+        self.image_info[image_id] = image_info
 
     def image_reference(self, image_id):
         """Return a link to the image in its source Website or details about
@@ -307,13 +307,13 @@ class Dataset(object):
         self.class_ids = np.arange(self.num_classes)
         self.class_names = [clean_name(c["name"]) for c in self.class_info]
         self.num_images = len(self.image_info)
-        self._image_ids = np.arange(self.num_images)
+        self._image_ids = [c['id'] for c in self.image_info.values()]
 
         # Mapping from source class and image IDs to internal IDs
         self.class_from_source_map = {"{}.{}".format(info['source'], info['id']): id
                                       for info, id in zip(self.class_info, self.class_ids)}
         self.image_from_source_map = {"{}.{}".format(info['source'], info['id']): id
-                                      for info, id in zip(self.image_info, self.image_ids)}
+                                      for info, id in zip(self.image_info.values(), self.image_ids)}
 
         # Map sources to class_ids they support
         self.sources = list(set([i['source'] for i in self.class_info]))
