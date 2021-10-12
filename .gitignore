@@ -127,3 +127,13 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Ignore data folder #
+/data/*
+
+# Ignore dsstore file that is a mac specific file #
+.DS_Store
+
+# Ignore model and log folders #
+/logs/*
+/models/*
