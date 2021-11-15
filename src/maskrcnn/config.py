@@ -256,7 +256,7 @@ class ADE20KConfig(Config):
     IMAGES_PER_GPU = 8
 
     # Number of classes (including background)
-    NUM_CLASSES = 1 + 3405 # background + 3406 shapes from the data.
+    NUM_CLASSES = 1 + 3381 # background + 3381 shapes from the data.
 
     # Use small images for faster training. Set the limits of the small side
     # the large side, and that determines the image shape.
@@ -275,3 +275,24 @@ class ADE20KConfig(Config):
 
     # use small validation steps since the epoch is small
     VALIDATION_STEPS = 2
+
+
+#%%
+import json
+
+class_file = '/Users/runelangergaard/Documents/SmartAnnotation/data/code_config.json'
+
+with open(class_file, 'rb') as f:
+    class_dict = json.load(f)
+
+classes = [class_name for class_name in class_dict.keys()]
+
+print(len(classes))
+# %%
+base_class = "BG"
+full_str = base_class + ',' + ','.join(classes)
+# %%
+hmm = full_str.split(',')
+# %%
+hmmm = [class_n for class_n in classes if ',' in class_n]
+# %%

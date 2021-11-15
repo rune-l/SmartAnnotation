@@ -1,4 +1,5 @@
 """Make predictions using the last trained model."""
+#%%
 import os
 import json
 import sys
@@ -13,6 +14,7 @@ import matplotlib.pyplot as plt
 
 # Root directory of the project
 ROOT_DIR = os.getcwd()
+
 
 # Import Mask RCNN
 from src.maskrcnn.config import ADE20KConfig
@@ -42,7 +44,7 @@ def get_ax(rows=1, cols=1, size=8):
     _, ax = plt.subplots(rows, cols, figsize=(size*cols, size*rows))
     return ax
 
-
+#%%
 if __name__ == '__main__':
     config = InferenceConfig()
 
@@ -50,10 +52,11 @@ if __name__ == '__main__':
 
     model = modellib.MaskRCNN(mode="inference", config=config,
                               model_dir=MODEL_DIR)
-
+    
     # Load weights #
-    model_path = model.find_last()
-
+    #model_path = model.find_last()
+    model_path = os.path.join(os.getcwd(), 'models', 'mask_rcnn_ade20k_0202.h5')
+    
     print("Loading weights from ", model_path)
     model.load_weights(model_path, by_name=True)
 
@@ -66,6 +69,7 @@ if __name__ == '__main__':
 
     with open(config_path) as fc:
         config_dict = json.load(fc)
+    print('Number of classes: {}'.format(len(config_dict)))
 
     val_data = dataset_helper.ADE20K(
         root_dir=data_dir,
@@ -109,3 +113,5 @@ if __name__ == '__main__':
                                 val_data.class_names, r['scores'],
                                 figsize=(8,8), ax=fig_ax[1], title='Model predictions')
     plt.show()
+
+# %%
