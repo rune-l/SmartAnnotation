@@ -9,8 +9,8 @@ To run the app locally, docker is required:
 
 2. Open a cmd interface. Move to webapp folder
 
-3. Run: docker build -t smart_annotator. 
-it will take a while to build
+3. Run: docker build -t smart_annotator . 
+ it will take a while to build
 
 4. Run: docker run smart_annotator
 
